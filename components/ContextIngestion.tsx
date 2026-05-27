@@ -1,21 +1,29 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import {
   Link2, Upload, ClipboardPaste, X, Plus, Loader2,
-  CheckCircle2, AlertCircle, Sparkles, FileText, Key,
+  CheckCircle2, AlertCircle, Sparkles, FileText, Key, BookOpen,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { ContextSource, SynthesisResult } from '@/data/types';
 import { cn } from '@/lib/utils';
 
-type InputTab = 'drive' | 'upload' | 'paste';
+type InputTab = 'notebook-lm' | 'drive' | 'upload' | 'paste';
+
+const TABS: { id: InputTab; label: string }[] = [
+  { id: 'notebook-lm', label: 'NotebookLM' },
+  { id: 'drive', label: 'Google Drive' },
+  { id: 'upload', label: 'Upload file' },
+  { id: 'paste', label: 'Paste text' },
+];
 
 export default function ContextIngestion() {
   const { session, addContextSource, removeContextSource, setSynthesis, clearSynthesis, setAnalyzing, setAnalyzeError } = useStore();
-  const [activeTab, setActiveTab] = useState<InputTab>('drive');
+  const [activeTab, setActiveTab] = useState<InputTab>('notebook-lm');
   const [driveUrl, setDriveUrl] = useState('');
   const [pasteText, setPasteText] = useState('');
+  const [nlmText, setNlmText] = useState('');
   const [driveLoading, setDriveLoading] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
@@ -23,6 +31,20 @@ export default function ContextIngestion() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const combinedContent = session.contextSources.map((s) => `--- ${s.name} ---\n${s.content}`).join('\n\n');
+
+  // ── NotebookLM paste ──────────────────────────────────────────────────────
+  function addNotebookLM() {
+    if (!nlmText.trim()) return;
+    const preview = nlmText.slice(0, 60).replace(/\n/g, ' ');
+    addContextSource({
+      id: crypto.randomUUID(),
+      type: 'notebook-lm',
+      name: `NotebookLM: "${preview}…"`,
+      content: nlmText.trim(),
+      addedAt: new Date().toISOString(),
+    });
+    setNlmText('');
+  }
 
   // ── Fetch Google Drive doc ────────────────────────────────────────────────
   async function fetchDriveDoc() {
@@ -56,15 +78,15 @@ export default function ContextIngestion() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
-  // ── Add paste ─────────────────────────────────────────────────────────────
+  // ── Paste ─────────────────────────────────────────────────────────────────
   function addPaste() {
     if (!pasteText.trim()) return;
     const preview = pasteText.slice(0, 60).replace(/\n/g, ' ');
-    addContextSource({ id: crypto.randomUUID(), type: 'paste', name: `Pasted notes: "${preview}…"`, content: pasteText.trim(), addedAt: new Date().toISOString() });
+    addContextSource({ id: crypto.randomUUID(), type: 'paste', name: `Notes: "${preview}…"`, content: pasteText.trim(), addedAt: new Date().toISOString() });
     setPasteText('');
   }
 
-  // ── Run synthesis ─────────────────────────────────────────────────────────
+  // ── Synthesis ─────────────────────────────────────────────────────────────
   async function runAnalysis() {
     if (!combinedContent.trim()) return;
     setAnalyzing(true);
@@ -87,7 +109,6 @@ export default function ContextIngestion() {
         setAnalyzing(false);
         return;
       }
-
       setSynthesis(data as SynthesisResult);
     } catch {
       setAnalyzeError('Network error — check your connection.');
@@ -106,7 +127,7 @@ export default function ContextIngestion() {
           <Sparkles className="w-4 h-4 text-[#7C3AED]" />
           <div>
             <h3 className="text-sm font-semibold">Bring in context</h3>
-            <p className="text-xs text-[#A1A1AA]">Google Drive · file upload · paste</p>
+            <p className="text-xs text-[#A1A1AA]">NotebookLM · Google Drive · file upload · paste</p>
           </div>
         </div>
         {hasSynthesis && (
@@ -116,25 +137,78 @@ export default function ContextIngestion() {
         )}
       </div>
 
-      {/* If synthesis done, show summary instead of input UI */}
       {hasSynthesis && session.synthesis ? (
         <SynthesisSummary synthesis={session.synthesis} sources={session.contextSources} onClear={clearSynthesis} onRemoveSource={removeContextSource} />
       ) : (
         <div className="p-5 flex flex-col gap-5">
-          {/* Input tabs */}
+
+          {/* Tabs */}
           <div className="flex gap-1 p-1 bg-[#F4F4F5] rounded-lg">
-            {([['drive', 'Google Drive'], ['upload', 'Upload file'], ['paste', 'Paste text']] as [InputTab, string][]).map(([tab, label]) => (
-              <button key={tab} onClick={() => setActiveTab(tab)} className={cn('flex-1 text-xs font-medium py-1.5 rounded-md transition-all', activeTab === tab ? 'bg-white text-[#18181B] shadow-sm' : 'text-[#71717A]')}>
+            {TABS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={cn(
+                  'flex-1 text-xs font-medium py-1.5 rounded-md transition-all',
+                  activeTab === id ? 'bg-white text-[#18181B] shadow-sm' : 'text-[#71717A] hover:text-[#3F3F46]'
+                )}
+              >
                 {label}
               </button>
             ))}
           </div>
 
-          {/* Tab content */}
+          {/* ── NotebookLM tab ── */}
+          {activeTab === 'notebook-lm' && (
+            <div className="flex flex-col gap-3">
+              {/* How-to steps */}
+              <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-[#F5F3FF] border border-[#DDD6FE]">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-3.5 h-3.5 text-[#7C3AED]" />
+                  <p className="text-xs font-semibold text-[#6D28D9]">How to export from NotebookLM</p>
+                </div>
+                <ol className="flex flex-col gap-1.5">
+                  {[
+                    'Open your notebook at notebooklm.google.com',
+                    'Click "Notebook guide" in the top right',
+                    'Select "Briefing doc", "FAQ", or "Study guide" — whichever covers the customer context',
+                    'Copy the full output and paste it below',
+                  ].map((step, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-[#6D28D9]">
+                      <span className="font-bold text-[#A78BFA] flex-shrink-0 w-4">{i + 1}.</span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[10px] text-[#A78BFA] mt-1">
+                  You can also paste the transcript from a NotebookLM Audio Overview, or copy directly from your notebook notes.
+                </p>
+              </div>
+
+              <textarea
+                value={nlmText}
+                onChange={(e) => setNlmText(e.target.value)}
+                placeholder="Paste your NotebookLM Briefing Doc, FAQ, study guide, or audio transcript here…"
+                rows={6}
+                className="w-full text-xs px-3 py-2.5 rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED20] placeholder:text-[#A1A1AA] resize-none transition-all"
+              />
+              <button
+                onClick={addNotebookLM}
+                disabled={!nlmText.trim()}
+                className="self-start px-4 py-2 rounded-lg bg-[#7C3AED] text-white text-xs font-medium hover:bg-[#6D28D9] disabled:opacity-40 transition-all flex items-center gap-1.5"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Add from NotebookLM
+              </button>
+            </div>
+          )}
+
+          {/* ── Google Drive tab ── */}
           {activeTab === 'drive' && (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-[#71717A]">
-                Paste a shareable Google Doc or Sheet link. The file must be set to <strong>"Anyone with the link"</strong> in Drive.
+                Paste a shareable Google Doc or Sheet link. The file must be set to{' '}
+                <strong className="text-[#3F3F46]">"Anyone with the link"</strong> in Drive.
               </p>
               <div className="flex gap-2">
                 <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] focus-within:border-[#7C3AED] focus-within:ring-1 focus-within:ring-[#7C3AED20] transition-all">
@@ -165,6 +239,7 @@ export default function ContextIngestion() {
             </div>
           )}
 
+          {/* ── Upload tab ── */}
           {activeTab === 'upload' && (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-[#71717A]">
@@ -181,15 +256,16 @@ export default function ContextIngestion() {
             </div>
           )}
 
+          {/* ── Paste tab ── */}
           {activeTab === 'paste' && (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-[#71717A]">
-                Paste meeting notes, call transcripts, CRM notes, or any text about this customer.
+                Paste meeting notes, call transcripts, CRM account notes, or anything else about this customer.
               </p>
               <textarea
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
-                placeholder="Paste notes from your last discovery call, account plan, or any relevant context…"
+                placeholder="Paste notes from your last discovery call, Salesforce account plan, or any relevant context…"
                 rows={5}
                 className="w-full text-xs px-3 py-2.5 rounded-lg border border-[#E4E4E7] bg-[#FAFAFA] focus:outline-none focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED20] placeholder:text-[#A1A1AA] resize-none transition-all"
               />
@@ -214,7 +290,7 @@ export default function ContextIngestion() {
             </div>
           )}
 
-          {/* API key input (shown if missing) */}
+          {/* API key prompt */}
           {showApiKey && (
             <div className="flex flex-col gap-2 p-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A]">
               <div className="flex items-center gap-2 text-xs font-medium text-[#92400E]">
@@ -228,11 +304,11 @@ export default function ContextIngestion() {
                 placeholder="sk-ant-…"
                 className="text-xs px-3 py-2 rounded-lg border border-[#FDE68A] bg-white outline-none focus:border-[#F59E0B] transition-all"
               />
-              <p className="text-[10px] text-[#A1A1AA]">Stored locally in your browser. Never sent anywhere except the analysis endpoint.</p>
+              <p className="text-[10px] text-[#A1A1AA]">Stored locally in your browser only.</p>
             </div>
           )}
 
-          {/* Analyze button */}
+          {/* Analyze */}
           {hasContext && (
             <button
               onClick={runAnalysis}
@@ -240,15 +316,9 @@ export default function ContextIngestion() {
               className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[#18181B] text-white text-sm font-medium hover:bg-[#27272A] disabled:opacity-60 transition-all"
             >
               {session.isAnalyzing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Analyzing with Claude…
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing with Claude…</>
               ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Synthesize & adapt discovery
-                </>
+                <><Sparkles className="w-4 h-4" /> Synthesize & adapt discovery</>
               )}
             </button>
           )}
@@ -266,10 +336,19 @@ export default function ContextIngestion() {
 }
 
 function SourceChip({ source, onRemove }: { source: ContextSource; onRemove: () => void }) {
-  const icons = { 'google-drive': Link2, 'file-upload': Upload, paste: ClipboardPaste };
-  const Icon = icons[source.type];
+  const icons = {
+    'google-drive': Link2,
+    'file-upload': Upload,
+    paste: ClipboardPaste,
+    'notebook-lm': BookOpen,
+  };
+  const Icon = icons[source.type] ?? ClipboardPaste;
+  const isNlm = source.type === 'notebook-lm';
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[#F5F3FF] border border-[#DDD6FE]">
+    <div className={cn(
+      'flex items-center gap-2.5 px-3 py-2 rounded-lg border',
+      isNlm ? 'bg-[#F5F3FF] border-[#DDD6FE]' : 'bg-[#F5F3FF] border-[#DDD6FE]'
+    )}>
       <Icon className="w-3.5 h-3.5 text-[#7C3AED] flex-shrink-0" />
       <span className="text-xs text-[#6D28D9] flex-1 truncate">{source.name}</span>
       <span className="text-[10px] text-[#A78BFA]">{Math.round(source.content.length / 1000)}k chars</span>
@@ -284,7 +363,6 @@ function SynthesisSummary({
   synthesis,
   sources,
   onClear,
-  onRemoveSource,
 }: {
   synthesis: SynthesisResult;
   sources: ContextSource[];
@@ -301,22 +379,18 @@ function SynthesisSummary({
     medium: 'text-[#D97706] bg-[#FFFBEB]',
     low: 'text-[#71717A] bg-[#F4F4F5]',
   };
-
   const knownCount = Object.keys(synthesis.knownAnswers).length;
 
   return (
     <div className="p-5 flex flex-col gap-4">
-      {/* Success header */}
       <div className="flex items-center gap-2">
         <CheckCircle2 className="w-4 h-4 text-[#059669]" />
         <span className="text-sm font-semibold text-[#059669]">Synthesis complete</span>
         <span className="ml-auto text-xs text-[#A1A1AA]">{sources.length} source{sources.length !== 1 ? 's' : ''}</span>
       </div>
 
-      {/* Context summary */}
       <p className="text-sm text-[#3F3F46] leading-relaxed">{synthesis.contextSummary}</p>
 
-      {/* Agency context */}
       {(synthesis.agencyContext.agencyName || synthesis.agencyContext.currentSystem || synthesis.agencyContext.agencyType) && (
         <div className="grid grid-cols-2 gap-2">
           {synthesis.agencyContext.agencyName && <Pill label="Agency" value={synthesis.agencyContext.agencyName} />}
@@ -326,7 +400,6 @@ function SynthesisSummary({
         </div>
       )}
 
-      {/* Recommended track */}
       {synthesis.recommendedTrack && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-[#F5F3FF] border border-[#DDD6FE]">
           <div className="flex-1">
@@ -339,7 +412,6 @@ function SynthesisSummary({
         </div>
       )}
 
-      {/* Pre-answered questions count */}
       {knownCount > 0 && (
         <div className="flex items-center gap-2 text-xs text-[#71717A]">
           <FileText className="w-3.5 h-3.5" />
@@ -347,7 +419,6 @@ function SynthesisSummary({
         </div>
       )}
 
-      {/* Key insights */}
       {synthesis.keyInsights.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-[#71717A] uppercase tracking-wider mb-2">Already known</p>
@@ -362,14 +433,13 @@ function SynthesisSummary({
         </div>
       )}
 
-      {/* Gaps to explore */}
       {synthesis.gapsToExplore.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-[#71717A] uppercase tracking-wider mb-2">Still needs discovery</p>
           <ul className="flex flex-col gap-1">
             {synthesis.gapsToExplore.map((gap, i) => (
               <li key={i} className="flex items-start gap-2 text-xs text-[#3F3F46]">
-                <span className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#F59E0B] font-bold text-[10px] leading-none flex items-center justify-center">?</span>
+                <span className="w-3.5 flex-shrink-0 text-[#F59E0B] font-bold text-[10px]">?</span>
                 {gap}
               </li>
             ))}

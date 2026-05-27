@@ -81,7 +81,7 @@ export interface DocuSignSolution {
 
 // ── Context ingestion types ──────────────────────────────────────────────────
 
-export type ContextSourceType = 'google-drive' | 'file-upload' | 'paste';
+export type ContextSourceType = 'google-drive' | 'file-upload' | 'paste' | 'notebook-lm';
 
 export interface ContextSource {
   id: string;
