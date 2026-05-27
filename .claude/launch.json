@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cw-discovery-tool",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3002,
+      "cwd": "/Users/coreywashington/cw-discovery-tool"
+    }
+  ]
+}
