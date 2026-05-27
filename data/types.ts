@@ -2,6 +2,8 @@ export type TrackId = 'solicitations' | 'third-party-review' | 'drafting-approva
 
 export type AnswerType = 'single' | 'multi' | 'scale' | 'text';
 
+export type DiscoveryMode = 'fresh' | 'context';
+
 export type PainPointId =
   | 'email-tracking'
   | 'no-templates'
@@ -77,7 +79,41 @@ export interface DocuSignSolution {
   accentColor: string;
 }
 
+// ── Context ingestion types ──────────────────────────────────────────────────
+
+export type ContextSourceType = 'google-drive' | 'file-upload' | 'paste';
+
+export interface ContextSource {
+  id: string;
+  type: ContextSourceType;
+  name: string;
+  content: string;
+  addedAt: string;
+}
+
+export interface AgencyContext {
+  agencyName?: string;
+  agencyType?: string;
+  currentSystem?: string;
+  teamSize?: string;
+  region?: string;
+}
+
+export interface SynthesisResult {
+  recommendedTrack: TrackId | null;
+  trackConfidence: 'high' | 'medium' | 'low';
+  contextSummary: string;
+  keyInsights: string[];
+  gapsToExplore: string[];
+  knownAnswers: Record<string, string | string[]>;
+  identifiedPainPoints: PainPointId[];
+  agencyContext: AgencyContext;
+}
+
+// ── Session ─────────────────────────────────────────────────────────────────
+
 export interface DiscoverySession {
+  mode: DiscoveryMode;
   track: TrackId | null;
   currentQuestionId: string | null;
   answers: Record<string, string | string[]>;
@@ -85,6 +121,11 @@ export interface DiscoverySession {
   workflowSteps: WorkflowStep[];
   identifiedPainPoints: PainPointId[];
   identifiedSolutions: string[];
+  // Context mode
+  contextSources: ContextSource[];
+  synthesis: SynthesisResult | null;
+  isAnalyzing: boolean;
+  analyzeError: string | null;
 }
 
 export interface SummaryData {

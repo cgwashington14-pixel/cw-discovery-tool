@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, RotateCcw, Zap, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Zap, TrendingUp, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getTrack } from '@/data/tracks';
 import { SOLUTIONS, PAIN_POINT_LABELS, IMPACT_STATS } from '@/data/solutions';
@@ -76,19 +76,61 @@ export default function SummaryPage() {
       <main className="flex-1 max-w-7xl mx-auto px-6 py-10 w-full">
         {/* Summary header */}
         <div className="mb-10 animate-slide-up">
-          <div
-            className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full mb-4"
-            style={{ backgroundColor: track.bgColor, color: track.accentColor }}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Discovery Complete · {track.title}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div
+              className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full"
+              style={{ backgroundColor: track.bgColor, color: track.accentColor }}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Discovery Complete · {track.title}
+            </div>
+            {session.synthesis && (
+              <div className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-[#F5F3FF] text-[#7C3AED]">
+                <Sparkles className="w-3.5 h-3.5" />
+                Context-enriched · {session.contextSources.length} source{session.contextSources.length !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">Your customer&apos;s workflow, mapped.</h1>
           <p className="text-[#71717A] text-base">
             {painPointCount} process gap{painPointCount !== 1 ? 's' : ''} identified ·{' '}
             {recommendedSolutions.length} DocuSign solution{recommendedSolutions.length !== 1 ? 's' : ''} matched
+            {session.synthesis && ` · ${Object.keys(session.synthesis.knownAnswers).length} pre-filled from notes`}
           </p>
         </div>
+
+        {/* Synthesis context card — shown when context mode was used */}
+        {session.synthesis && (
+          <div className="mb-6 rounded-2xl border border-[#DDD6FE] bg-[#F5F3FF] p-5 animate-slide-up">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-[#7C3AED] flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-[#6D28D9] mb-1">From your context</p>
+                <p className="text-sm text-[#4C1D95] leading-relaxed mb-3">{session.synthesis.contextSummary}</p>
+                {session.synthesis.gapsToExplore.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-[#7C3AED] mb-1.5">Areas to follow up on:</p>
+                    <ul className="flex flex-col gap-1">
+                      {session.synthesis.gapsToExplore.map((g, i) => (
+                        <li key={i} className="text-xs text-[#6D28D9] flex items-start gap-1.5">
+                          <span className="font-bold text-[#A78BFA]">→</span> {g}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              {session.synthesis.agencyContext.agencyName && (
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs font-semibold text-[#7C3AED]">{session.synthesis.agencyContext.agencyName}</p>
+                  {session.synthesis.agencyContext.agencyType && (
+                    <p className="text-xs text-[#A78BFA] capitalize">{session.synthesis.agencyContext.agencyType}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Left: Workflow + Pain points */}
