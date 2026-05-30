@@ -112,6 +112,12 @@ export interface SynthesisResult {
 
 // ── Session ─────────────────────────────────────────────────────────────────
 
+export interface AgencyProfile {
+  agencyName: string;
+  agencyType: string;
+  contactName: string;
+}
+
 export interface DiscoverySession {
   mode: DiscoveryMode;
   track: TrackId | null;
@@ -126,6 +132,8 @@ export interface DiscoverySession {
   synthesis: SynthesisResult | null;
   isAnalyzing: boolean;
   analyzeError: string | null;
+  // Agency quick-fill
+  agencyProfile: AgencyProfile;
 }
 
 export interface SummaryData {

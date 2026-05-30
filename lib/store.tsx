@@ -9,6 +9,7 @@ import {
   WorkflowStep,
   ContextSource,
   SynthesisResult,
+  AgencyProfile,
 } from '@/data/types';
 import { TRACKS } from '@/data/tracks';
 import { SOLUTIONS } from '@/data/solutions';
@@ -24,7 +25,8 @@ type Action =
   | { type: 'SET_SYNTHESIS'; synthesis: SynthesisResult }
   | { type: 'CLEAR_SYNTHESIS' }
   | { type: 'SET_ANALYZING'; value: boolean }
-  | { type: 'SET_ANALYZE_ERROR'; error: string | null };
+  | { type: 'SET_ANALYZE_ERROR'; error: string | null }
+  | { type: 'SET_AGENCY_PROFILE'; profile: AgencyProfile };
 
 const initialState: DiscoverySession = {
   mode: 'fresh',
@@ -39,6 +41,7 @@ const initialState: DiscoverySession = {
   synthesis: null,
   isAnalyzing: false,
   analyzeError: null,
+  agencyProfile: { agencyName: '', agencyType: '', contactName: '' },
 };
 
 function collectPainPoints(answer: string | string[], questionId: string, trackId: TrackId): PainPointId[] {
@@ -215,6 +218,9 @@ function reducer(state: DiscoverySession, action: Action): DiscoverySession {
     case 'SET_ANALYZE_ERROR':
       return { ...state, analyzeError: action.error, isAnalyzing: false };
 
+    case 'SET_AGENCY_PROFILE':
+      return { ...state, agencyProfile: action.profile };
+
     default:
       return state;
   }
@@ -234,6 +240,7 @@ interface StoreContextValue {
   clearSynthesis: () => void;
   setAnalyzing: (v: boolean) => void;
   setAnalyzeError: (err: string | null) => void;
+  setAgencyProfile: (profile: AgencyProfile) => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -251,6 +258,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const clearSynthesis = useCallback(() => dispatch({ type: 'CLEAR_SYNTHESIS' }), []);
   const setAnalyzing = useCallback((value: boolean) => dispatch({ type: 'SET_ANALYZING', value }), []);
   const setAnalyzeError = useCallback((error: string | null) => dispatch({ type: 'SET_ANALYZE_ERROR', error }), []);
+  const setAgencyProfile = useCallback((profile: AgencyProfile) => dispatch({ type: 'SET_AGENCY_PROFILE', profile }), []);
 
   const resolveNext = useCallback(
     (questionId: string, answer: string | string[]) =>
@@ -282,6 +290,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         clearSynthesis,
         setAnalyzing,
         setAnalyzeError,
+        setAgencyProfile,
       }}
     >
       {children}
