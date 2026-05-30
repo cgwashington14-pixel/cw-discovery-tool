@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Nunito } from 'next/font/google';
 import './globals.css';
 import { StoreProvider } from '@/lib/store';
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-nunito',
+  weight: ['400', '600', '700', '800', '900'],
   display: 'swap',
 });
 
@@ -17,8 +18,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
-      <body className="min-h-full bg-[#FAFAFA] text-[#18181B] antialiased">
+    <html lang="en" className={`${nunito.variable} h-full`}>
+      <body className="min-h-full bg-[#F8F7FF] text-[#1A1535] antialiased">
         <StoreProvider>{children}</StoreProvider>
       </body>
     </html>
